@@ -1,0 +1,1 @@
+Conexión a supabase

@@ -1,16 +1,30 @@
 const express = require('express');
 const router = express.Router();
+const supabase = require('../config/supabase');
 
-// Datos test
-const mockRooms = [
-    { id: 1, room_number: "101", status: "disponible", type: "Sencilla" },
-    { id: 2, room_number: "102", status: "ocupada", type: "Doble" },
-    { id: 3, room_number: "201", status: "limpieza", type: "Suite" }
-];
+// GET para obtener los datos de las habitaciones desde supabase
+router.get('/', async (req, res) => {
+    const { data, error } = await supabase
+        .from('rooms')
+        .select('id, room_number, status, room_type_id(name)')
+        .order('room_number', { ascending: true });
 
-// Ruta GET para obtener todas las habitaciones
-router.get('/', (req, res) => {
-    res.json(mockRooms);
+    if (error) { return res.status(400).json({ error: error.message }); }
+    res.json(data);
+})
+
+router.patch('/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { newStatus } = req.body;
+
+    const { data, error } = await supabase
+        .from('rooms')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .select();
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ message: "Sincronizando con Supabase", data });
 });
 
 module.exports = router;

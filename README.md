@@ -50,7 +50,7 @@ Por el momento, este archivo solo se utiliza para definir el **puerto del servid
 PORT=3000
 SUPABASE_URL= ...
 SUPABASE_KEY= ...
-
+```
 
 ### Variables de Entorno (Front)
 

@@ -6,7 +6,7 @@ const supabase = require('../config/supabase');
 router.get('/', async (req, res) => {
     const { data, error } = await supabase
         .from('rooms')
-        .select('id, room_number, status, room_type_id(name)')
+        .select('*, room_types(name, base_nightly_rate)')
         .order('room_number', { ascending: true });
 
     if (error) { return res.status(400).json({ error: error.message }); }

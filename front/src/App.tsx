@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabaseClient';
-import './App.css'
 import { RoomCard } from './components/RoomCard'
-//import { Sidebar } from './components/Slidebar'
+import { Sidebar } from './components/Sidebar';
+import './index.css'
+
+
 
 interface Room {
   id: number;
@@ -68,20 +70,21 @@ function App() {
   }, []);
 
   return (
-    <div className="Dashboard-container">
-      {/* <Sidebar /> */}
-      <main style={{ flex: 1, padding: '40px' }}>
-        <header style={{ marginBottom: '30px' }}>
-          <h1>Dashboard</h1>
-          <p>Bienvenido, aquí tienes el estado actual del hotel.</p>
+    <div className="app-container">
+      <Sidebar />
+
+      <main className="main-content">
+        <header className="mb-8">
+          <h1 style={{ fontFamily: 'serif', fontSize: '32px', color: '#1a1614', margin: 0 }}>Dashboard</h1>
+          <p style={{ color: '#666' }}>Bienvenido de nuevo, aquí tienes el estado del hotel.</p>
         </header>
 
         {/* Sección de Estadísticas */}
-        <section style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
+        <section style={{display: 'flex', gap: '20px', marginBottom: '40px'}}>
           <StatCard title="Total" value={rooms.length} color="#b19171" />
           <StatCard
             title="Disponibles"
-            value={rooms.filter(r => r.status === 'disponible').length}
+            value={rooms.filter(r => r.status?.toLowerCase() === 'available').length}
             color="#4caf50"
           />
         </section>
@@ -90,21 +93,25 @@ function App() {
         <section style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: '20px'
+          gap: '20px',
+          backgroundColor: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          transition: 'border-color 0.3s ease'
         }}>
-          {rooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              id={room.id}
-              number={room.room_number}
-              initialStatus={room.status}
-              type={room.room_types?.name || "Cargando..."}
-            />
-          ))}
-        </section>
-
-      </main>
-    </div>
+        {rooms.map((room) => (
+          <RoomCard
+            key={room.id}
+            id={room.id}
+            number={room.room_number}
+            initialStatus={room.status}
+            type={room.room_types?.name || "Cargando..."}
+          />
+        ))}
+      </section>
+    </main>
+    </div >
   );
 }
 

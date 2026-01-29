@@ -40,17 +40,31 @@ npm install
 
 ---
 
-### Variables de Entorno
+### Variables de Entorno (Back)
 
 Dentro de la carpeta `/back`, debe existir un archivo `.env`.
 
-Por el momento, este archivo solo se utiliza para definir el **puerto del servidor**, por ejemplo:
+Por el momento, este archivo solo se utiliza para definir el **puerto del servidor, el URL y KEY de Supabase**, por ejemplo:
 
 ```
 PORT=3000
+SUPABASE_URL= ...
+SUPABASE_KEY= ...
+
+
+### Variables de Entorno (Front)
+
+Dentro de la carpeta `/front`, debe existir un archivo `.env`.
+
+Por el momento, este archivo solo se utiliza para definir el **el URL y KEY de Supabase**, por ejemplo:
+
+```
+VITE_SUPABASE_URL= ...
+VITE_SUPABASE_KEY= ...
 ```
 
-⚠️ Asegúrate de que el archivo `.env` esté correctamente ubicado en `/back`.
+**SUPABASE_URL** se encuentra en Setting/Data API como URL. 
+**SUPABASE_KEY** se encuentra Setting/API Keys/Legacy anon, service_role API keys como Service Role.
 
 ---
 

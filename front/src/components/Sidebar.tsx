@@ -1,4 +1,4 @@
-import { Navigation, LogOut } from "lucide-react";
+import { Navigation } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const navigationItems = [

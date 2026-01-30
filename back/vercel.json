@@ -1,9 +1,14 @@
 {
   "version": 2,
-  "rewrites": [
+  "functions": {
+    "src/app.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "src/app.js"
+      "src": "/(.*)",
+      "dest": "src/app.js"
     }
   ]
 }

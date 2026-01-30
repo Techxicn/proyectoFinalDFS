@@ -4,7 +4,7 @@ import { RoomCard } from './components/RoomCard'
 import { Sidebar } from './components/Sidebar';
 import './index.css'
 
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface Room {
   id: number;
@@ -16,7 +16,7 @@ interface Room {
   }
 }
 
-const StatCard = ({ title, value, color, icon }: any) => (
+const StatCard = ({ title, value, color }: { title: string; value: number; color: string }) => (
   <div style={{
     backgroundColor: 'white',
     padding: '20px',
@@ -31,12 +31,13 @@ const StatCard = ({ title, value, color, icon }: any) => (
 );
 
 function App() {
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
 
   const getInitialData = async () => {
-    // Petición al backend para obtener las habitaciones
     try {
-      const response = await fetch('http://localhost:3000/api/rooms');
+      const response = await fetch(`${API_URL}/api/rooms`);
+      if (!response.ok) throw new Error('Error al conectar con el servidor');
+      
       const data = await response.json();
       setRooms(data);
     } catch (error) {
@@ -54,7 +55,6 @@ function App() {
         { event: 'UPDATE', schema: 'public', table: 'rooms' },
         (payload) => {
           console.log('Cambios detectados: ', payload);
-          // Actualizacion de datos locales
           setRooms((prevRooms) =>
             prevRooms.map((room) =>
               room.id === payload.new.id
@@ -80,7 +80,7 @@ function App() {
         </header>
 
         {/* Sección de Estadísticas */}
-        <section style={{display: 'flex', gap: '20px', marginBottom: '40px'}}>
+        <section style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
           <StatCard title="Total" value={rooms.length} color="#b19171" />
           <StatCard
             title="Disponibles"
@@ -100,19 +100,19 @@ function App() {
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
           transition: 'border-color 0.3s ease'
         }}>
-        {rooms.map((room) => (
-          <RoomCard
-            key={room.id}
-            id={room.id}
-            number={room.room_number}
-            initialStatus={room.status}
-            type={room.room_types?.name || "Cargando..."}
-          />
-        ))}
-      </section>
-    </main>
-    </div >
+          {rooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              id={room.id}
+              number={room.room_number}
+              initialStatus={room.status}
+              type={room.room_types?.name || "Estándar"}
+            />
+          ))}
+        </section>
+      </main>
+    </div>
   );
 }
 
-export default App
+export default App;

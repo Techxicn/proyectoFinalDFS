@@ -23,3 +23,5 @@ app.use('/api/rooms', roomRoutes);
 app.listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);
 });
+
+module.exports = app;

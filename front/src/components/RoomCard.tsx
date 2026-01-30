@@ -1,7 +1,10 @@
 import { useState } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export const RoomCard = ({ id, number, initialStatus, type }: any) => {
     const [status, setStatus] = useState(initialStatus);
+
     const getStatusColor = (currentStatus: string) => {
         switch (currentStatus) {
             case 'available': return '#4caf50';
@@ -15,22 +18,23 @@ export const RoomCard = ({ id, number, initialStatus, type }: any) => {
 
     const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const nextStatus = e.target.value;
+        
         setStatus(nextStatus);
 
         try {
-            const response = await fetch(`http://localhost:3000/api/rooms/${id}/status`, {
+            const response = await fetch(`${API_URL}/api/rooms/${id}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ newStatus: nextStatus })
             });
 
             if (!response.ok) {
-                setStatus(nextStatus);
+                setStatus(initialStatus);
                 alert(`Falla al actualizar el estado de la habitación ${number}`);
             }
         } catch (error) {
             console.error("Error al actualizar:", error);
-            setStatus(nextStatus);
+            setStatus(initialStatus);
         }
     };
 
@@ -58,7 +62,7 @@ export const RoomCard = ({ id, number, initialStatus, type }: any) => {
                 }}>{status}</span>
             </div>
 
-            <select defaultValue={status} onChange={handleStatusChange} style={{
+            <select value={status} onChange={handleStatusChange} style={{
                 width: '100%',
                 padding: '8px',
                 borderRadius: '5px',

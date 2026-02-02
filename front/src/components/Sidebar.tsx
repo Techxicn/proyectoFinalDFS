@@ -31,7 +31,6 @@ export function Sidebar() {
             </nav>
 
             <div style={{ padding: '20px', borderTop: '1px solid #2a2420' }}>
-                <p style={{ fontSize: '14px', margin: 0 }}>Sarah Robinson</p>
                 <button style={{
                     background: 'none', border: 'none', color: '#f44336',
                     cursor: 'pointer', padding: '10px 0'

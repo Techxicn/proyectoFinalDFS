@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Bookings from './pages/Booking';
 import Guest from './pages/Guest';
+import './index.css';
 
 function App() {
   return (

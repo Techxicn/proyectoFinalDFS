@@ -14,8 +14,8 @@ export function Sidebar() {
     return (
         <aside className="sidebar">
             <div style={{ padding: '24px', borderBottom: '1px solid #2a2420' }}>
-                <h2 style={{ color: 'white', margin: 0, fontFamily: 'serif' }}>Luxe Haven</h2>
-                <p style={{ fontSize: '10px', opacity: 0.5, letterSpacing: '1px' }}>STAFF PORTAL</p>
+                <h1 style={{ color: 'white', margin: 0, fontFamily: 'serif' }}>Luxe Haven</h1>
+                <h2><p style={{ fontSize: '10px', opacity: 0.5, letterSpacing: '1px' }}>STAFF PORTAL</p></h2>
             </div>
 
             <nav style={{ flex: 1, paddingTop: '20px' }}>
@@ -34,7 +34,7 @@ export function Sidebar() {
             <div style={{ padding: '20px', borderTop: '1px solid #2a2420' }}>
                 <button style={{
                     background: 'none', border: 'none', color: '#f44336',
-                    cursor: 'pointer', padding: '10px 0'
+                    cursor: 'pointer', padding: '10px 0', fontSize: '17px'
                 }}>
                     Cerrar Sesión
                 </button>

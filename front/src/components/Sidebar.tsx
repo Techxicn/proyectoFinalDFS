@@ -1,10 +1,11 @@
-import { Navigation } from "lucide-react";
+import { CalendarCheck2, LayoutDashboard, UserStar } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
+
 const navigationItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: Navigation },
-    { name: 'Bookings', href: '/bookings', icon: Navigation },
-    { name: 'Guests', href: '/guests', icon: Navigation },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Bookings', href: '/bookings', icon: CalendarCheck2 },
+    { name: 'Guests', href: '/guests', icon: UserStar },
 ];
 
 export function Sidebar() {

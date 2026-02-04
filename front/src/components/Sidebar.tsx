@@ -1,5 +1,6 @@
 import { CalendarCheck2, LayoutDashboard, UserStar } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 
 const navigationItems = [
@@ -14,7 +15,7 @@ export function Sidebar() {
     return (
         <aside className="sidebar">
             <div style={{ padding: '24px', borderBottom: '1px solid #2a2420' }}>
-                <h1 style={{ color: 'white', margin: 0, fontFamily: 'serif' }}>Luxe Haven</h1>
+                <h1 style={{ color: 'white', margin: 0, fontFamily: 'serif' }}>Nova June</h1>
                 <h2><p style={{ fontSize: '10px', opacity: 0.5, letterSpacing: '1px' }}>STAFF PORTAL</p></h2>
             </div>
 
@@ -35,7 +36,11 @@ export function Sidebar() {
                 <button style={{
                     background: 'none', border: 'none', color: '#f44336',
                     cursor: 'pointer', padding: '10px 0', fontSize: '17px'
-                }}>
+                }}
+                onClick={async () => {
+                    await supabase.auth.signOut();
+                }}
+                >
                     Cerrar Sesión
                 </button>
             </div>

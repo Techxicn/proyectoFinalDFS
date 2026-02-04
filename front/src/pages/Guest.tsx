@@ -32,11 +32,12 @@ export default function Booking() {
     const filteredGuests = bookings.filter(booking => 
         booking.guests?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.guests?.phone?.toLowerCase().includes(searchTerm.toLowerCase())||
-        booking.status?.toLowerCase().includes(searchTerm.toLowerCase())
+        booking.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.rooms?.room_number?.toString().includes(searchTerm)
     );
 
     return (
-        <div className="p-8">
+        <div className="main-content">
             <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
                     <h1 style={{ fontFamily: 'serif', fontSize: '32px', color: 'var(--text-dark)', margin: 0 }}>
@@ -47,7 +48,7 @@ export default function Booking() {
 
                 <input
                     type="text"
-                    placeholder="Buscar por nombre o email..."
+                    placeholder="Buscar por nombre, teléfono o habitación..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{

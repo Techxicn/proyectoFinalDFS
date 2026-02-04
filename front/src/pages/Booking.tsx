@@ -27,7 +27,7 @@ export default function Booking() {
     }, []);
 
     return (
-        <div className="p-8">
+        <div className="main-content">
             <header style={{ marginBottom: '32px' }}>
                 <h1 style={{ fontFamily: 'serif', fontSize: '32px', color: 'var(--text-dark)', margin: 0 }}>
                     Reservaciones

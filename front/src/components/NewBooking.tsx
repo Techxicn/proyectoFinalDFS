@@ -47,7 +47,7 @@ export default function NewReservation({ onSuccess }: NewBookingProps) {
                 .single();
 
             if (guestError) throw guestError;
-            
+
             // Insertar la reservación
             const { error: resError } = await supabase
                 .from('reservations')
@@ -73,6 +73,13 @@ export default function NewReservation({ onSuccess }: NewBookingProps) {
         } finally {
             setLoading(false);
         }
+
+        await supabase
+            .from('rooms')
+            .update({ status: 'occupied' })
+            .eq('id', reservationData.room_id);
+
+        onSuccess();
     };
 
 
@@ -87,10 +94,15 @@ export default function NewReservation({ onSuccess }: NewBookingProps) {
                         onChange={e => setGuestData({ ...guestData, full_name: e.target.value })}
                         required
                         style={inputStyle}
-                        />
+                    />
                     <input
                         placeholder="Teléfono"
                         onChange={e => setGuestData({ ...guestData, phone: e.target.value })}
+                        style={inputStyle}
+                    />
+                    <input
+                        placeholder="Identificación"
+                        onChange={e => setGuestData({ ...guestData, id_document: e.target.value })}
                         style={inputStyle}
                     />
                 </div>

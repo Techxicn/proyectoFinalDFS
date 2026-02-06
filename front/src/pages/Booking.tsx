@@ -1,184 +1,288 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import '../index.css'
-import { data } from "react-router-dom";
+import "../index.css";
+
+/**
+ * Tipos y constantes (fuera del componente para no redefinir en cada render)
+ */
+type ReservationStatus =
+  | "pending"
+  | "confirmed"
+  | "checked_in"
+  | "checked_out"
+  | "cancelled"
+  | "no_show";
+
+const STATUS_LABEL: Record<ReservationStatus, string> = {
+  pending: "Pendiente",
+  confirmed: "Confirmada",
+  checked_in: "Checked in",
+  checked_out: "Checked out",
+  cancelled: "Cancelada",
+  no_show: "No show",
+};
+
+// Máquina de estados: transiciones permitidas (sin room swap)
+const NEXT_STATUS: Record<ReservationStatus, ReservationStatus[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["checked_in", "no_show", "cancelled"],
+  checked_in: ["checked_out"],
+  checked_out: [], // terminal
+  cancelled: [], // terminal
+  no_show: [], // terminal
+};
+
+const getAllowedStatusOptions = (current: ReservationStatus): ReservationStatus[] => {
+  return [current, ...NEXT_STATUS[current]];
+};
+
+const mapStatusChangeError = (msg: string) => {
+  if (msg.includes("INVALID_TRANSITION")) return "Transición de estado no permitida.";
+  if (msg.includes("ROOM_UNAVAILABLE")) return "La habitación está en mantenimiento o fuera de servicio.";
+  if (msg.includes("ROOM_ALREADY_OCCUPIED")) return "La habitación ya está ocupada.";
+  if (msg.includes("ROOM_NOT_AVAILABLE_FOR_RESERVATION")) return "La habitación no está disponible para reservar.";
+  if (msg.includes("ROOM_NOT_READY_FOR_CHECKIN")) return "La habitación no está lista para hacer check-in.";
+  if (msg.includes("CANNOT_RELEASE_OCCUPIED_ROOM")) return "No puedes cancelar/no-show si la habitación está ocupada.";
+  if (msg.includes("ROOM_NOT_OCCUPIED_CANNOT_CHECKOUT")) return "No puedes hacer check-out si la habitación no está ocupada.";
+  if (msg.includes("RESERVATION_NOT_FOUND")) return "No se encontró la reservación.";
+  if (msg.includes("ROOM_NOT_FOUND")) return "No se encontró la habitación asociada.";
+  if (msg.includes("ROOM_ID_IMMUTABLE")) return "No se puede cambiar la habitación de una reservación (bloqueado por sistema).";
+  return msg || "Error desconocido.";
+};
+
+const isReservationStatus = (value: any): value is ReservationStatus => {
+  return (
+    value === "pending" ||
+    value === "confirmed" ||
+    value === "checked_in" ||
+    value === "checked_out" ||
+    value === "cancelled" ||
+    value === "no_show"
+  );
+};
 
 export default function Booking() {
-    const [bookings, setBookings] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
-    const fetchBookings = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('reservations')
-                .select(`*, room_id, guests(full_name, phone, id_document), rooms(id, room_number)
-`)
+  // Bloqueo por fila mientras se actualiza
+  const [updatingReservationId, setUpdatingReservationId] = useState<string | null>(null);
 
-                .order('check_in', { ascending: false });
+  /**
+   * Traer reservaciones (incluye relaciones guests y rooms)
+   */
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
 
-            if (error) throw error;
-            setBookings(data || []);
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+      const { data, error } = await supabase
+        .from("reservations")
+        .select(
+          `*,
+           guests(full_name, phone, id_document),
+           rooms(id, room_number)`
+        )
+        .order("check_in", { ascending: false });
 
-    // Cambio de estado de reservacion
-    const handleStatusChange = async (
-        reservationId: string,
-        roomId: string,
-        newStatus: string
-    ) => {
-        if (!roomId) return;
-        try {
-            const { error } = await supabase
-                .from('reservations')
-                .update({ status: newStatus })
-                .eq('id', reservationId);
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (error) throw error;
+  /**
+   * Cambiar estado (UI validada + RPC atómica)
+   */
+  const handleStatusChange = async (
+    reservationId: string,
+    currentStatus: ReservationStatus,
+    newStatus: ReservationStatus
+  ) => {
+    if (newStatus === currentStatus) return;
+    if (updatingReservationId === reservationId) return;
 
-            if (newStatus === 'checked_out' || newStatus === 'cancelled') {
-                await supabase
-                    .from('rooms')
-                    .update({ status: 'maintenance' })
-                    .eq('id', roomId);
-            }
+    const allowed = new Set(getAllowedStatusOptions(currentStatus));
+    if (!allowed.has(newStatus)) {
+      alert("Esa transición no está permitida desde el estado actual.");
+      await fetchBookings();
+      return;
+    }
 
-            if (newStatus === 'checked_in') {
-                await supabase
-                    .from('rooms')
-                    .update({ status: 'occupied' })
-                    .eq('id', roomId);
-            }
+    try {
+      setUpdatingReservationId(reservationId);
 
-            fetchBookings();
-        } catch (error: any) {
-            alert('Error al actualizar: ' + error.message);
-        }
-    };
+      const { error } = await supabase.rpc("change_reservation_status", {
+        p_reservation_id: reservationId,
+        p_new_status: newStatus, // ✅ ahora coincide con tu enum
+      });
 
-    useEffect(() => {
-        fetchBookings();
-    }, []);
+      if (error) throw new Error(mapStatusChangeError(error.message ?? ""));
 
-    // Filtrado en tiempo 
-    const filteredGuests = bookings.filter(booking =>
-        booking.guests?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.guests?.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.rooms?.room_number?.toString().includes(searchTerm) ||
-        booking.check_in?.toString().includes(searchTerm.toLowerCase()) ||
-        booking.check_out?.toString().includes(searchTerm.toLowerCase())
-    );
+      await fetchBookings();
+    } catch (err: any) {
+      alert(err?.message ?? "No se pudo actualizar el estado.");
+      await fetchBookings();
+    } finally {
+      setUpdatingReservationId(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Filtrado
+   */
+  const filteredGuests = bookings.filter((booking) => {
+    const term = searchTerm.toLowerCase();
+
+    const fullName = (booking.guests?.full_name ?? "").toLowerCase();
+    const phone = String(booking.guests?.phone ?? "").toLowerCase();
+    const status = String(booking.status ?? "").toLowerCase();
+    const roomNumber = String(booking.rooms?.room_number ?? "");
+    const checkIn = String(booking.check_in ?? "").toLowerCase();
+    const checkOut = String(booking.check_out ?? "").toLowerCase();
 
     return (
-        <div className="main-content">
-            <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                    <h1 style={{ fontFamily: 'serif', fontSize: '32px', color: 'var(--text-dark)', margin: 0 }}>
-                        Reservaciones
-                    </h1>
-                    <p style={{ color: '#666' }}>Gestión de entradas y salidas de huéspedes.</p>
-                </div>
+      fullName.includes(term) ||
+      phone.includes(term) ||
+      status.includes(term) ||
+      roomNumber.includes(searchTerm) ||
+      checkIn.includes(term) ||
+      checkOut.includes(term)
+    );
+  });
 
-                <input
-                    type="text"
-                    placeholder="Buscar por nombre, teléfono, check in, check out o numero de habitación..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                        padding: '10px 15px',
-                        borderRadius: '8px',
-                        border: '1px solid #ddd',
-                        width: '300px',
-                        outline: 'none'
-                    }}
-                />
-            </header>
-
-            <div className="table-container">
-                {loading ? (
-                    <p style={{ padding: '20px' }}>Cargando datos...</p>
-                ) : (
-                    <table className="custom-table">
-                        <thead>
-                            <tr>
-                                <th>Huésped</th>
-                                <th>Identificación</th>
-                                <th>Teléfono</th>
-                                <th>Habitación</th>
-                                <th>Check-in</th>
-                                <th>Check-out</th>
-                                <th>Estado</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredGuests.length > 0 ? (
-                                filteredGuests.map((booking) => (
-                                    <tr key={booking.id}>
-                                        <td>{booking.guests?.full_name || 'No registrado'}</td>
-                                        <td>{booking.guests?.id_document || 'No registrado'}</td>
-                                        <td>{booking.guests?.phone || 'No registrado'}</td>
-                                        <td>{booking.rooms?.room_number || 'No registrado'}</td>
-                                        <td>{new Date(booking.check_in).toLocaleDateString()}</td>
-                                        <td>{new Date(booking.check_out).toLocaleDateString()}</td>
-                                        <td>
-                                            <select
-                                                value={booking.status}
-                                                onChange={(e) => handleStatusChange(booking.id, booking.room_id, e.target.value)}
-                                                style={{
-                                                    padding: '6px 10px',
-                                                    borderRadius: '20px',
-                                                    border: 'none',
-                                                    fontSize: '12px',
-                                                    fontWeight: 'bold',
-                                                    cursor: 'pointer',
-                                                    backgroundColor:
-                                                        booking.status === 'confirmed' ? '#e8f5e9' :
-                                                            booking.status === 'checked_in' ? '#e3f2fd' :
-                                                                booking.status === 'checked_out' ? '#f5f5f5' : '#ffebee',
-                                                    color:
-                                                        booking.status === 'confirmed' ? '#2e7d32' :
-                                                            booking.status === 'checked_in' ? '#1976d2' :
-                                                                booking.status === 'checked_out' ? '#616161' : '#c62828'
-                                                }}
-                                            >
-                                                <option value="confirmed">Confirmada</option>
-                                                <option value="checked_in">Checked in</option>
-                                                <option value="checked_out">Checked out</option>
-                                                <option value="cancelled">Cancelada</option>
-                                            </select>
-
-                                            {/* <span className="status-badge" style={{
-                                                backgroundColor: booking.status === 'confirmed' ? '#e8f5e9' : '#fff3e0',
-                                                color: booking.status === 'confirmed' ? '#2e7d32' : '#ef6c00'
-                                            }}>
-                                                {booking.status}
-                                            </span> */}
-
-                                        </td>
-                                        <td>${booking.total_amount}</td>
-                                    </tr>
-                                ))
-                            )
-                                : (
-                                    <tr>
-                                        <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                                            No se encontraron huéspedes con ese criterio.
-                                        </td>
-                                    </tr>
-                                )
-                            }
-                        </tbody>
-                    </table>
-                )}
-            </div>
+  return (
+    <div className="main-content">
+      <header
+        style={{
+          marginBottom: "32px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+        }}
+      >
+        <div>
+          <h1 style={{ fontFamily: "serif", fontSize: "32px", color: "var(--text-dark)", margin: 0 }}>
+            Reservaciones
+          </h1>
+          <p style={{ color: "#666" }}>Gestión de entradas y salidas de huéspedes.</p>
         </div>
-    )
+
+        <input
+          type="text"
+          placeholder="Buscar por nombre, teléfono, check in, check out o número de habitación..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "10px 15px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            width: "300px",
+            outline: "none",
+          }}
+        />
+      </header>
+
+      <div className="table-container">
+        {loading ? (
+          <p style={{ padding: "20px" }}>Cargando datos...</p>
+        ) : (
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Huésped</th>
+                <th>Identificación</th>
+                <th>Teléfono</th>
+                <th>Habitación</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Estado</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredGuests.length > 0 ? (
+                filteredGuests.map((booking) => {
+                  const rawStatus = booking.status;
+                  const currentStatus: ReservationStatus | null = isReservationStatus(rawStatus)
+                    ? rawStatus
+                    : null;
+
+                  const checkInDate = booking.check_in ? new Date(booking.check_in) : null;
+                  const checkOutDate = booking.check_out ? new Date(booking.check_out) : null;
+
+                  return (
+                    <tr key={booking.id}>
+                      <td>{booking.guests?.full_name || "No registrado"}</td>
+                      <td>{booking.guests?.id_document || "No registrado"}</td>
+                      <td>{booking.guests?.phone || "No registrado"}</td>
+                      <td>{booking.rooms?.room_number ?? "No registrado"}</td>
+                      <td>{checkInDate ? checkInDate.toLocaleDateString() : "No registrado"}</td>
+                      <td>{checkOutDate ? checkOutDate.toLocaleDateString() : "No registrado"}</td>
+                      <td>
+                        {currentStatus ? (
+                          (() => {
+                            const options = getAllowedStatusOptions(currentStatus);
+                            const isUpdating = updatingReservationId === booking.id;
+
+                            return (
+                              <select
+                                value={currentStatus}
+                                disabled={isUpdating}
+                                onChange={(e) =>
+                                  handleStatusChange(
+                                    booking.id,
+                                    currentStatus,
+                                    e.target.value as ReservationStatus
+                                  )
+                                }
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: "20px",
+                                  border: "none",
+                                  fontSize: "12px",
+                                  fontWeight: "bold",
+                                  cursor: isUpdating ? "not-allowed" : "pointer",
+                                  opacity: isUpdating ? 0.7 : 1,
+                                }}
+                              >
+                                {options.map((st) => (
+                                  <option key={st} value={st}>
+                                    {STATUS_LABEL[st]}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()
+                        ) : (
+                          <span style={{ color: "#c62828", fontWeight: 700 }}>
+                            Estado inválido ({String(rawStatus)})
+                          </span>
+                        )}
+                      </td>
+                      <td>${booking.total_amount}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                    No se encontraron huéspedes con ese criterio.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
 }

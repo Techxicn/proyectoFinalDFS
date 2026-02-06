@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import '../index.css'
+import { data } from "react-router-dom";
 
 export default function Booking() {
     const [bookings, setBookings] = useState<any[]>([]);
@@ -12,7 +13,9 @@ export default function Booking() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('reservations')
-                .select('*, guests(full_name, phone, id_document), rooms(room_number)')
+                .select(`*, room_id, guests(full_name, phone, id_document), rooms(id, room_number)
+`)
+
                 .order('check_in', { ascending: false });
 
             if (error) throw error;
@@ -21,6 +24,41 @@ export default function Booking() {
             console.error('Error:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Cambio de estado de reservacion
+    const handleStatusChange = async (
+        reservationId: string,
+        roomId: string,
+        newStatus: string
+    ) => {
+        if (!roomId) return;
+        try {
+            const { error } = await supabase
+                .from('reservations')
+                .update({ status: newStatus })
+                .eq('id', reservationId);
+
+            if (error) throw error;
+
+            if (newStatus === 'checked_out' || newStatus === 'cancelled') {
+                await supabase
+                    .from('rooms')
+                    .update({ status: 'maintenance' })
+                    .eq('id', roomId);
+            }
+
+            if (newStatus === 'checked_in') {
+                await supabase
+                    .from('rooms')
+                    .update({ status: 'occupied' })
+                    .eq('id', roomId);
+            }
+
+            fetchBookings();
+        } catch (error: any) {
+            alert('Error al actualizar: ' + error.message);
         }
     };
 
@@ -91,12 +129,39 @@ export default function Booking() {
                                         <td>{new Date(booking.check_in).toLocaleDateString()}</td>
                                         <td>{new Date(booking.check_out).toLocaleDateString()}</td>
                                         <td>
-                                            <span className="status-badge" style={{
+                                            <select
+                                                value={booking.status}
+                                                onChange={(e) => handleStatusChange(booking.id, booking.room_id, e.target.value)}
+                                                style={{
+                                                    padding: '6px 10px',
+                                                    borderRadius: '20px',
+                                                    border: 'none',
+                                                    fontSize: '12px',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer',
+                                                    backgroundColor:
+                                                        booking.status === 'confirmed' ? '#e8f5e9' :
+                                                            booking.status === 'checked_in' ? '#e3f2fd' :
+                                                                booking.status === 'checked_out' ? '#f5f5f5' : '#ffebee',
+                                                    color:
+                                                        booking.status === 'confirmed' ? '#2e7d32' :
+                                                            booking.status === 'checked_in' ? '#1976d2' :
+                                                                booking.status === 'checked_out' ? '#616161' : '#c62828'
+                                                }}
+                                            >
+                                                <option value="confirmed">Confirmada</option>
+                                                <option value="checked_in">Checked in</option>
+                                                <option value="checked_out">Checked out</option>
+                                                <option value="cancelled">Cancelada</option>
+                                            </select>
+
+                                            {/* <span className="status-badge" style={{
                                                 backgroundColor: booking.status === 'confirmed' ? '#e8f5e9' : '#fff3e0',
                                                 color: booking.status === 'confirmed' ? '#2e7d32' : '#ef6c00'
                                             }}>
                                                 {booking.status}
-                                            </span>
+                                            </span> */}
+
                                         </td>
                                         <td>${booking.total_amount}</td>
                                     </tr>

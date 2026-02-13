@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Bookings from './pages/Booking';
 import Guest from './pages/Guest';
 import Login from './pages/Login';
+import Room from './pages/rooms';
 import './index.css';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
               <Routes>
                 <Route path='/' element={<Dashboard />} />
                 <Route path='/dashboard' element={<Dashboard />} />
+                <Route path='/rooms' element={<Room />} />
                 <Route path='/bookings' element={<Bookings />} />
                 <Route path='/guests' element={<Guest />} />
               </Routes>

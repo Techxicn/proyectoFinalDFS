@@ -87,27 +87,7 @@ function App() {
                     />
                 </section>
 
-                {/* Sección de Cuadrícula de Habitaciones */}
-                <section style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                    gap: '20px',
-                    backgroundColor: 'white',
-                    padding: '20px',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                    transition: 'border-color 0.3s ease'
-                }}>
-                    {rooms.map((room) => (
-                        <RoomCard
-                            key={room.id}
-                            id={room.id}
-                            number={room.room_number}
-                            initialStatus={room.status}
-                            type={room.room_types?.name || "Estándar"}
-                        />
-                    ))}
-                </section>
+                
             </main>
         </div>
     );

@@ -1,4 +1,4 @@
-import { CalendarCheck2, LayoutDashboard, UserStar } from "lucide-react";
+import { CalendarCheck2, LayoutDashboard, UserStar, Bed } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 const navigationItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Bookings', href: '/bookings', icon: CalendarCheck2 },
+    { name: 'Rooms', href: '/rooms', icon: Bed },
     { name: 'Guests', href: '/guests', icon: UserStar },
 ];
 
